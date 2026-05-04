@@ -36,7 +36,7 @@ GROUP BY g.group_id, g.group_name HAVING SUM(e.amount) > 10000;
 SELECT u.name, COUNT(m.group_id) AS num_groups 
 FROM Users u JOIN Memberships m ON u.user_id = m.user_id 
 GROUP BY u.user_id, u.name HAVING COUNT(m.group_id) > 1; 
--- Query 9 — Unsettled Splits (Outstanding Obligations) 
+-- Query 7 — Unsettled Splits (Outstanding Obligations) 
 SELECT u.name AS user_name, g.group_name,        e.title AS expense_title,        es.amount_owed, es.is_settled 
 FROM Expense_Split es 
 JOIN Users u ON es.user_id = u.user_id 
@@ -44,7 +44,7 @@ JOIN Expenses e ON es.expense_id = e.expense_id
 JOIN FinGroups g ON e.group_id = g.group_id 
 WHERE es.is_settled = 'N' 
 ORDER BY g.group_name, es.amount_owed DESC; 
--- Query 10 — Total Unsettled Amount Per User (All Groups) 
+-- Query 8 — Total Unsettled Amount Per User (All Groups) 
 SELECT u.name, 
        COUNT(es.split_id) AS unsettled_splits, 
        SUM(es.amount_owed) AS total_outstanding 
@@ -53,7 +53,7 @@ JOIN Expense_Split es ON u.user_id = es.user_id
 WHERE es.is_settled = 'N' 
 GROUP BY u.user_id, u.name 
 ORDER BY total_outstanding DESC; 
--- Query 11 — Top Spenders Across All Groups (RANK Window Function) 
+-- Query 9 — Top Spenders Across All Groups (RANK Window Function) 
 SELECT u.name, 
        COUNT(e.expense_id) AS expenses_paid, 
        SUM(e.amount) AS total_paid_out, 
@@ -62,14 +62,14 @@ FROM Users u
 JOIN Expenses e ON u.user_id = e.paid_by 
 GROUP BY u.user_id, u.name 
 ORDER BY spender_rank; 
--- Query 12 — Settlement History with Full Details 
+-- Query 10 — Settlement History with Full Details 
 SELECT s.settlement_id, g.group_name,        payer.name AS paid_by, payee.name AS paid_to,        s.amount, s.settlement_date, s.note 
 FROM Settlements s 
 JOIN FinGroups g ON s.group_id = g.group_id 
 JOIN Users payer ON s.payer_id = payer.user_id 
 JOIN Users payee ON s.payee_id = payee.user_id 
 ORDER BY s.settlement_date DESC; 
--- Query 13 — Loan Portfolio Summary by Status 
+-- Query 11 — Loan Portfolio Summary by Status 
 SELECT l.status, 
        COUNT(*) AS loan_count, 
        SUM(l.amount) AS total_amount, 
@@ -78,7 +78,7 @@ FROM Loans l
 GROUP BY l.status 
 ORDER BY loan_count DESC; 
  
--- Query 14 — Net Debtors (Subquery: Owed > Paid) SELECT name, total_paid, total_owed, 
+-- Query 12 — Net Debtors (Subquery: Owed > Paid) SELECT name, total_paid, total_owed, 
        (total_owed - total_paid) AS shortfall 
 FROM ( 
     SELECT u.name, 
@@ -91,7 +91,7 @@ FROM (
 ) 
 WHERE total_owed > total_paid 
 ORDER BY shortfall DESC; 
--- Query 15 — Full Expense Split Detail with Settlement Status 
+-- Query 13 — Full Expense Split Detail with Settlement Status 
 SELECT g.group_name, e.title, 
        e.amount AS total_expense,        payer.name AS paid_by,        u.name AS owes_name,        es.amount_owed,        CASE es.is_settled 
            WHEN 'Y' THEN 'Settled' 
@@ -102,7 +102,7 @@ JOIN FinGroups g ON e.group_id = g.group_id
 JOIN Users u ON es.user_id = u.user_id 
 JOIN Users payer ON e.paid_by = payer.user_id 
 ORDER BY g.group_name, e.expense_date DESC; 
--- Query 16 — Cross-Group Totals Using ROLLUP 
+-- Query 14 — Cross-Group Totals Using ROLLUP 
 SELECT 
     NVL(g.group_name, '** ALL GROUPS **') AS group_name, 
     NVL(u.name, '** ALL USERS **') AS user_name, 
@@ -112,14 +112,14 @@ JOIN FinGroups g ON e.group_id = g.group_id
 GROUP BY ROLLUP(g.group_name, u.name) 
 ORDER BY g.group_name NULLS LAST, total_paid DESC NULLS LAST; 
 
--- Query 17 — Recent Audit Log Entries (Last 20)
+-- Query 15 — Recent Audit Log Entries (Last 20)
  SELECT al.log_id, al.action_type, al.table_name,        al.record_id, u.name AS action_by,        al.action_date, al.details 
 FROM Audit_Log al 
 LEFT JOIN Users u ON al.action_by = u.user_id 
 ORDER BY al.action_date DESC 
 FETCH FIRST 20 ROWS ONLY; 
  
--- Query 18 — Admin Contribution Percentage Per Group 
+-- Query 16 — Admin Contribution Percentage Per Group 
 SELECT g.group_name, admin_user.name AS admin_name,        COALESCE(SUM(e.amount), 0) AS admin_total_paid, 
        gs.total_spent AS group_total,        ROUND(COALESCE(SUM(e.amount), 0) 
            / NULLIF(gs.total_spent, 0) * 100, 1) AS admin_pct 
